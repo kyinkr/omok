@@ -11,6 +11,11 @@ pygame으로 만든 15x15 렌주룰 오목입니다. 사람과 AI가 대결합�
 
 ## 실행 방법
 
+### 웹에서 바로 하기
+
+**https://kyinkr.github.io/omok/** — 설치 없이 브라우저에서 실행됩니다.
+(처음 로딩에 몇 초 걸리며, 웹 버전은 PC 버전보다 AI 계산이 느립니다.)
+
 ### 실행 파일 (Python 없이)
 
 [Releases](../../releases) 페이지에서 `RenjuOmok.exe`를 내려받아 실행합니다.
@@ -50,8 +55,19 @@ Python 3.9 이상이 필요합니다.
 | `main.py` | pygame 화면과 게임 진행 |
 | `renju.py` | 렌주룰 판정 (금수, 승리) |
 | `ai.py` | AI (VCF/VCT 탐색, 알파-베타 탐색) |
+| `assets/` | 나눔고딕 폰트 (웹 버전 한글 표시용, [OFL](assets/OFL.txt)) |
 
-## 배포 (실행 파일 자동 빌드)
+## 배포
+
+### 웹 (GitHub Pages)
+
+`main` 브랜치에 push 하면 GitHub Actions가 [pygbag](https://github.com/pygame-web/pygbag)으로
+웹(WebAssembly) 버전을 빌드해 GitHub Pages에 배포합니다.
+처음 한 번은 저장소 **Settings → Pages → Source** 를 **GitHub Actions** 로 설정해야 합니다.
+
+로컬에서 웹 버전 확인: `pip install pygbag` 후 `python -m pygbag .` → http://localhost:8000
+
+### 실행 파일 (Windows)
 
 `v`로 시작하는 태그를 올리면 GitHub Actions가 Windows 실행 파일을 빌드해 Releases에 올립니다.
 

@@ -8,11 +8,18 @@
   ESC             : 종료
 """
 
+import asyncio
+import os
 import sys
 import threading
 import time
 
 import pygame
+
+# 브라우저(pygbag/WebAssembly)에서 실행 중인가. 웹에서는 스레드를 쓸 수 없다.
+WEB = sys.platform == "emscripten"
+FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "assets", "NanumGothic-Regular.ttf")
 
 from renju import (Board, BLACK, WHITE, EMPTY, SIZE, CENTER, BOARD_CELLS,
                    idx, to_xy, opponent)
@@ -44,10 +51,15 @@ LEVEL_NAMES = [("easy", "쉬움"), ("normal", "보통"), ("hard", "어려움")]
 
 
 def load_font(size, bold=False):
-    for name in ("malgungothic", "applegothic", "nanumgothic", "notosanscjkkr", "gulim"):
-        path = pygame.font.match_font(name, bold=bold)
-        if path:
-            return pygame.font.Font(path, size)
+    if not WEB:
+        for name in ("malgungothic", "applegothic", "nanumgothic", "notosanscjkkr", "gulim"):
+            path = pygame.font.match_font(name, bold=bold)
+            if path:
+                return pygame.font.Font(path, size)
+    if os.path.exists(FONT_PATH):            # 함께 배포하는 나눔고딕 (웹은 항상 이것)
+        f = pygame.font.Font(FONT_PATH, size)
+        f.set_bold(bold)
+        return f
     return pygame.font.SysFont(None, size, bold=bold)
 
 
@@ -205,7 +217,10 @@ class Game:
                 if gen == self.generation:
                     self.ai_result = p if p is not None else -1
 
-        threading.Thread(target=worker, daemon=True).start()
+        if WEB:
+            self.sync_job = worker               # 다음 화면을 그린 뒤 메인 루프에서 실행
+        else:
+            threading.Thread(target=worker, daemon=True).start()
 
     def update_ai(self):
         if self.winner is not None:
@@ -410,19 +425,20 @@ class Game:
         self.screen.blit(t, t.get_rect(center=box.center))
 
     # ------------------------------------------------------------ 메인 루프
-    def run(self):
+    async def run(self):
+        self.sync_job = None
         while True:
             mouse = pygame.mouse.get_pos()
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
                     pygame.quit()
-                    sys.exit()
+                    return
                 elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                     self.on_click(e.pos)
                 elif e.type == pygame.KEYDOWN:
-                    if e.key == pygame.K_ESCAPE:
+                    if e.key == pygame.K_ESCAPE and not WEB:
                         pygame.quit()
-                        sys.exit()
+                        return
                     elif e.key == pygame.K_u:
                         self.undo()
                     elif e.key == pygame.K_n:
@@ -436,7 +452,13 @@ class Game:
             self.draw_banner()
             pygame.display.flip()
             self.clock.tick(FPS)
+            await asyncio.sleep(0)               # 브라우저에 제어를 돌려줌 (pygbag 필수)
+
+            if self.sync_job is not None:        # 웹: '생각 중' 화면을 먼저 보여 준 뒤 계산
+                job, self.sync_job = self.sync_job, None
+                await asyncio.sleep(0)
+                job()
 
 
 if __name__ == "__main__":
-    Game().run()
+    asyncio.run(Game().run())
